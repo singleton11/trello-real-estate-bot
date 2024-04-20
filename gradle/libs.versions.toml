@@ -6,11 +6,19 @@ logback = "1.5.5"
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
 ktor-server-core-jvm = { group = "io.ktor", name = "ktor-server-core-jvm", version.ref = "ktor" }
 ktor-server-netty-jvm = { group = "io.ktor", name = "ktor-server-netty-jvm", version.ref = "ktor" }
+ktor-server-content-negotiation-jvm = { group = "io.ktor", name = "ktor-server-content-negotiation-jvm", version.ref = "ktor" }
+ktor-serialization-kotlinx-json-jvm = { group = "io.ktor", name = "ktor-serialization-kotlinx-json-jvm", version.ref = "ktor" }
 logback = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 
 [bundles]
-ktor-server-jvm = ["ktor-server-core-jvm", "ktor-server-netty-jvm"]
+ktor-server-jvm = [
+    "ktor-server-core-jvm",
+    "ktor-server-netty-jvm",
+    "ktor-server-content-negotiation-jvm",
+    "ktor-serialization-kotlinx-json-jvm"
+]
