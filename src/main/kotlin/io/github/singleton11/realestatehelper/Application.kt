@@ -121,7 +121,7 @@ fun Application.module() {
                         val normalizedAddress = address.replace(" ", "-").lowercase()
                         searchResult.itemListElement.filter { it.url.contains(normalizedAddress) }.firstOrNull()?.let {
                             val updateCardResponse = client.put {
-                                url("https://api.trello.com/1/cards/$cardId?key=$key&token=$token")
+                                url("https://api.trello.com/1/cards/$cardId?key=${key.getString()}&token=${token.getString()}")
                                 contentType(ContentType.Application.Json)
                                 setBody(CardData(it.url))
                             }
