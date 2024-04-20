@@ -20,3 +20,15 @@ dependencies {
     implementation(libs.bundles.ktor.client.jvm)
     implementation(libs.logback)
 }
+
+ktor {
+    docker {
+        externalRegistry.set(
+            io.ktor.plugin.features.DockerImageRegistry.dockerHub(
+                appName = provider { "ktor-app" },
+                username = providers.environmentVariable("DOCKER_HUB_USERNAME"),
+                password = providers.environmentVariable("DOCKER_HUB_PASSWORD")
+            )
+        )
+    }
+}

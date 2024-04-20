@@ -28,6 +28,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
@@ -85,12 +86,14 @@ fun Application.module() {
             val type = json.decodeFromString<Input>(input).action.type
             if (type == "createCard") {
                 val data = json.decodeFromString<DataInput>(input)
+                logger.info("Card created: $data")
                 val address = data.action.data.card.name
                 val cardId = data.action.data.card.id
                 val urlEncodedAddress = address.encodeURLQueryComponent()
                 val response =
                     client.get("https://zb.funda.info/suggest/alternatives/?query=$urlEncodedAddress&max=7&type=koop&areatype=")
                 val alternatives = response.body<Alternatives>()
+                logger.info("Alternatives: $alternatives")
 
                 if (alternatives.results.isNotEmpty()) {
                     val selectedArea = buildString {
@@ -103,7 +106,6 @@ fun Application.module() {
                         deleteCharAt(length - 1)
                         append("]")
                     }.encodeURLQueryComponent(true, true)
-
                     val searchResponse = client.get {
                         url("https://www.funda.nl/zoeken/koop?selected_area=$selectedArea")
                         header(
@@ -111,18 +113,20 @@ fun Application.module() {
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
                         )
                     }
-
                     val searchResponseHtml = searchResponse.body<String>()
                     val regex = """(?<=<script type="application/ld\+json">)[\s\S]*?(?=</script>)""".toRegex()
                     regex.find(searchResponseHtml)?.value?.let {
                         val searchResult = Json { ignoreUnknownKeys = true }.decodeFromString<SearchResult>(it)
+                        logger.info("Search result: $searchResult")
                         val normalizedAddress = address.replace(" ", "-").lowercase()
                         searchResult.itemListElement.filter { it.url.contains(normalizedAddress) }.firstOrNull()?.let {
-                            client.put {
+                            val updateCardResponse = client.put {
                                 url("https://api.trello.com/1/cards/$cardId?key=$key&token=$token")
                                 contentType(ContentType.Application.Json)
                                 setBody(CardData(it.url))
                             }
+
+                            logger.info("Update card response status: ${updateCardResponse.status}")
                         }
                     }
                 }
@@ -134,3 +138,5 @@ fun Application.module() {
         }
     }
 }
+
+val logger = LoggerFactory.getLogger("Application")
