@@ -15,10 +15,20 @@ ktor-server-content-negotiation-jvm = { group = "io.ktor", name = "ktor-server-c
 ktor-serialization-kotlinx-json-jvm = { group = "io.ktor", name = "ktor-serialization-kotlinx-json-jvm", version.ref = "ktor" }
 logback = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 
+ktor-client-core-jvm = { group = "io.ktor", name = "ktor-client-core-jvm", version.ref = "ktor" }
+ktor-client-cio-jvm = { group = "io.ktor", name = "ktor-client-cio-jvm", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+
 [bundles]
 ktor-server-jvm = [
     "ktor-server-core-jvm",
     "ktor-server-netty-jvm",
     "ktor-server-content-negotiation-jvm",
     "ktor-serialization-kotlinx-json-jvm"
+]
+
+ktor-client-jvm = [
+    "ktor-client-core-jvm",
+    "ktor-client-cio-jvm",
+    "ktor-client-content-negotiation"
 ]
