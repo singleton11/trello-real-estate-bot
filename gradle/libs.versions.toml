@@ -19,6 +19,8 @@ ktor-client-core-jvm = { group = "io.ktor", name = "ktor-client-core-jvm", versi
 ktor-client-cio-jvm = { group = "io.ktor", name = "ktor-client-cio-jvm", version.ref = "ktor" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 
+kotlin-test = {group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin"}
+
 [bundles]
 ktor-server-jvm = [
     "ktor-server-core-jvm",

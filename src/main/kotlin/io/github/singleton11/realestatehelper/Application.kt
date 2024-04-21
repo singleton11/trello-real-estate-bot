@@ -145,7 +145,7 @@ suspend fun TrelloAccess.populateCard(trelloCard: TrelloCard) {
     val searchResultJson = regex.find(searchResponseHtml)?.value ?: return
     val searchResult = jsonObject.decodeFromString<SearchResult>(searchResultJson)
     logger.info("Search result: $searchResult")
-    val normalizedAddress = address.replace(" ", "-").replace(".", "").lowercase()
+    val normalizedAddress = address.normalizeAddress()
     val link = searchResult.itemListElement.firstOrNull { it.url.contains(normalizedAddress) } ?: return
 
     coroutineScope {
@@ -196,5 +196,7 @@ fun HttpRequestBuilder.safariUserAgent() {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
     )
 }
+
+fun String.normalizeAddress(): String = replace(" ", "-").replace(".", "").lowercase()
 
 val logger = LoggerFactory.getLogger("Application")

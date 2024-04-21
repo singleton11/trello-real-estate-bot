@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.bundles.ktor.server.jvm)
     implementation(libs.bundles.ktor.client.jvm)
     implementation(libs.logback)
+
+    testImplementation(libs.kotlin.test)
 }
 
 ktor {
