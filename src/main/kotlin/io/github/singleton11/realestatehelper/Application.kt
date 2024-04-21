@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) = EngineMain.main(args)
@@ -199,4 +200,4 @@ fun HttpRequestBuilder.safariUserAgent() {
 
 fun String.normalizeAddress(): String = replace(" ", "-").replace(".", "").lowercase()
 
-val logger = LoggerFactory.getLogger("Application")
+val logger: Logger = LoggerFactory.getLogger("Application")
