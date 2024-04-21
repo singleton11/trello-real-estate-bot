@@ -73,6 +73,9 @@ data class TrelloAccess(val key: String, val token: String)
 @Serializable
 data class AttachmentData(val id: String, val url: String, val setCover: Boolean)
 
+@Serializable
+data class TrelloCard(val id: String, val name: String, val desc: String, val idAttachmentCover: String?)
+
 val jsonObject = Json { ignoreUnknownKeys = true }
 
 val client = HttpClient(CIO) {
@@ -98,7 +101,8 @@ fun Application.module() {
                 logger.info("Card created: $data")
                 val address = data.action.data.card.name
                 val cardId = data.action.data.card.id
-                TrelloAccess(key.getString(), token.getString()).populateCard(cardId, address)
+                TrelloAccess(key.getString(), token.getString())
+                    .populateCard(TrelloCard(cardId, address, "", null))
             }
             call.respond(HttpStatusCode.OK)
         }
@@ -108,7 +112,9 @@ fun Application.module() {
     }
 }
 
-suspend fun TrelloAccess.populateCard(cardId: String, address: String) {
+suspend fun TrelloAccess.populateCard(trelloCard: TrelloCard) {
+    logger.info("Input trello card: $trelloCard")
+    val address = trelloCard.name
     val urlEncodedAddress = address.encodeURLQueryComponent()
     val response =
         client.get("https://zb.funda.info/suggest/alternatives/?query=$urlEncodedAddress&max=7&type=koop&areatype=")
@@ -142,17 +148,21 @@ suspend fun TrelloAccess.populateCard(cardId: String, address: String) {
     val link = searchResult.itemListElement.firstOrNull { it.url.contains(normalizedAddress) } ?: return
 
     coroutineScope {
-        launch {
-            val updateCardResponse = client.put {
-                url("https://api.trello.com/1/cards/$cardId?key=$key&token=$token")
-                contentType(ContentType.Application.Json)
-                setBody(CardData(link.url))
+        if (trelloCard.desc.isBlank()) {
+            launch {
+                val updateCardResponse = client.put {
+                    url("https://api.trello.com/1/cards/${trelloCard.id}?key=$key&token=$token")
+                    contentType(ContentType.Application.Json)
+                    setBody(CardData(link.url))
+                }
+                logger.info("Update card response status: ${updateCardResponse.status}")
             }
-            logger.info("Update card response status: ${updateCardResponse.status}")
         }
 
-        launch {
-            uploadImage(link, regex, cardId)
+        if (trelloCard.idAttachmentCover == null) {
+            launch {
+                uploadImage(link, regex, trelloCard.id)
+            }
         }
     }
 }
