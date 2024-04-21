@@ -1,15 +1,10 @@
 package io.github.singleton11.realestatehelper
 
-import io.github.singleton11.realestatehelper.DataInput.Action.Data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
+import io.ktor.client.request.*
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -25,6 +20,8 @@ import io.ktor.server.routing.head
 import io.ktor.server.routing.post
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -65,71 +62,43 @@ data class SearchResult(val itemListElement: List<ItemListElement>) {
     data class ItemListElement(val url: String)
 }
 
+@Serializable
+data class PropertyInfo(val photo: List<Photo>) {
+    @Serializable
+    data class Photo(val contentUrl: String)
+}
+
+data class TrelloAccess(val key: String, val token: String)
+
+@Serializable
+data class AttachmentData(val id: String, val url: String, val setCover: Boolean)
+
+val jsonObject = Json { ignoreUnknownKeys = true }
+
 val client = HttpClient(CIO) {
     install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-        })
+        json(jsonObject)
     }
 }
 
 fun Application.module() {
     val key = environment.config.propertyOrNull("trello.key") ?: error("Can't read trello API key")
     val token = environment.config.propertyOrNull("trello.token") ?: error("Can't read trello API Token")
+
     routing {
         head("/") {
             call.respond(HttpStatusCode.OK)
         }
         post("/") {
             val input = call.receive<String>()
-            val json = Json { ignoreUnknownKeys = true }
+            val json = jsonObject
             val type = json.decodeFromString<Input>(input).action.type
             if (type == "createCard") {
                 val data = json.decodeFromString<DataInput>(input)
                 logger.info("Card created: $data")
                 val address = data.action.data.card.name
                 val cardId = data.action.data.card.id
-                val urlEncodedAddress = address.encodeURLQueryComponent()
-                val response =
-                    client.get("https://zb.funda.info/suggest/alternatives/?query=$urlEncodedAddress&max=7&type=koop&areatype=")
-                val alternatives = response.body<Alternatives>()
-                logger.info("Alternatives: $alternatives")
-
-                if (alternatives.results.isNotEmpty()) {
-                    val selectedArea = buildString {
-                        append("[")
-                        for (alternative in alternatives.results) {
-                            append("\"")
-                            append(alternative.geoIdentifier)
-                            append("\",")
-                        }
-                        deleteCharAt(length - 1)
-                        append("]")
-                    }.encodeURLQueryComponent(true, true)
-                    val searchResponse = client.get {
-                        url("https://www.funda.nl/zoeken/koop?selected_area=$selectedArea")
-                        header(
-                            HttpHeaders.UserAgent,
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
-                        )
-                    }
-                    val searchResponseHtml = searchResponse.body<String>()
-                    val regex = """(?<=<script type="application/ld\+json">)[\s\S]*?(?=</script>)""".toRegex()
-                    regex.find(searchResponseHtml)?.value?.let {
-                        val searchResult = Json { ignoreUnknownKeys = true }.decodeFromString<SearchResult>(it)
-                        logger.info("Search result: $searchResult")
-                        val normalizedAddress = address.replace(" ", "-").lowercase()
-                        searchResult.itemListElement.filter { it.url.contains(normalizedAddress) }.firstOrNull()?.let {
-                            val updateCardResponse = client.put {
-                                url("https://api.trello.com/1/cards/$cardId?key=${key.getString()}&token=${token.getString()}")
-                                contentType(ContentType.Application.Json)
-                                setBody(CardData(it.url))
-                            }
-
-                            logger.info("Update card response status: ${updateCardResponse.status}")
-                        }
-                    }
-                }
+                TrelloAccess(key.getString(), token.getString()).populateCard(cardId, address)
             }
             call.respond(HttpStatusCode.OK)
         }
@@ -137,6 +106,84 @@ fun Application.module() {
             call.respondText("Test")
         }
     }
+}
+
+suspend fun TrelloAccess.populateCard(cardId: String, address: String) {
+    val urlEncodedAddress = address.encodeURLQueryComponent()
+    val response =
+        client.get("https://zb.funda.info/suggest/alternatives/?query=$urlEncodedAddress&max=7&type=koop&areatype=")
+    val alternatives = response.body<Alternatives>()
+    logger.info("Alternatives: $alternatives")
+
+    if (alternatives.results.isEmpty()) {
+        return
+    }
+
+    val selectedArea = buildString {
+        append("[")
+        for (alternative in alternatives.results) {
+            append("\"")
+            append(alternative.geoIdentifier)
+            append("\",")
+        }
+        deleteCharAt(length - 1)
+        append("]")
+    }.encodeURLQueryComponent(true, true)
+    val searchResponse = client.get {
+        url("https://www.funda.nl/zoeken/koop?selected_area=$selectedArea")
+        safariUserAgent()
+    }
+    val searchResponseHtml = searchResponse.body<String>()
+    val regex = """(?<=<script type="application/ld\+json">)[\s\S]*?(?=</script>)""".toRegex()
+    val searchResultJson = regex.find(searchResponseHtml)?.value ?: return
+    val searchResult = jsonObject.decodeFromString<SearchResult>(searchResultJson)
+    logger.info("Search result: $searchResult")
+    val normalizedAddress = address.replace(" ", "-").lowercase()
+    val link = searchResult.itemListElement.firstOrNull { it.url.contains(normalizedAddress) } ?: return
+
+    coroutineScope {
+        launch {
+            val updateCardResponse = client.put {
+                url("https://api.trello.com/1/cards/$cardId?key=$key&token=$token")
+                contentType(ContentType.Application.Json)
+                setBody(CardData(link.url))
+            }
+            logger.info("Update card response status: ${updateCardResponse.status}")
+        }
+
+        launch {
+            uploadImage(link, regex, cardId)
+        }
+    }
+}
+
+private suspend fun TrelloAccess.uploadImage(
+    link: SearchResult.ItemListElement,
+    regex: Regex,
+    cardId: String
+) {
+    val propertyPageResponse = client.get {
+        url(link.url)
+        safariUserAgent()
+    }
+    val propertyPageHtml = propertyPageResponse.body<String>()
+    val propertyInfoJson = regex.find(propertyPageHtml)?.value ?: return
+    val propertyInfo = jsonObject.decodeFromString<PropertyInfo>(propertyInfoJson)
+    logger.info("Property info: $propertyInfo")
+    val mainPhotoUrl = propertyInfo.photo.firstOrNull()?.contentUrl ?: return
+    val createAttachmentResponse = client.post {
+        url("https://api.trello.com/1/cards/$cardId/attachments?key=$key&token=$token")
+        contentType(ContentType.Application.Json)
+        setBody(AttachmentData(cardId, mainPhotoUrl, true))
+    }
+    logger.info("Create attachment response status: ${createAttachmentResponse.status}")
+}
+
+fun HttpRequestBuilder.safariUserAgent() {
+    header(
+        HttpHeaders.UserAgent,
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
+    )
 }
 
 val logger = LoggerFactory.getLogger("Application")
