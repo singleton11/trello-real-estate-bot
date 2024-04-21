@@ -1,0 +1,10 @@
+# synology docker-compose for deployment
+
+services:
+  app:
+    image: whoishe/ktor-app
+    ports:
+      - 8080:8080
+    environment:
+      - TRELLO_API_KEY=trello-api-key
+      - TRELLO_API_TOKEN=trello-token
