@@ -135,6 +135,7 @@ suspend fun TrelloAccess.populateCard(trelloCard: TrelloCard) {
         deleteCharAt(length - 1)
         append("]")
     }.encodeURLQueryComponent(true, true)
+
     val searchResponse = client.get {
         url("https://www.funda.nl/zoeken/koop?selected_area=$selectedArea")
         safariUserAgent()
@@ -144,7 +145,7 @@ suspend fun TrelloAccess.populateCard(trelloCard: TrelloCard) {
     val searchResultJson = regex.find(searchResponseHtml)?.value ?: return
     val searchResult = jsonObject.decodeFromString<SearchResult>(searchResultJson)
     logger.info("Search result: $searchResult")
-    val normalizedAddress = address.replace(" ", "-").lowercase()
+    val normalizedAddress = address.replace(" ", "-").replace(".", "").lowercase()
     val link = searchResult.itemListElement.firstOrNull { it.url.contains(normalizedAddress) } ?: return
 
     coroutineScope {
