@@ -4,8 +4,9 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+val mainClassFqn = "io.ktor.server.netty.EngineMain"
 application {
-    mainClass.set("io.ktor.server.netty.EngineMain")
+    mainClass.set(mainClassFqn)
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
@@ -30,5 +31,11 @@ ktor {
                 password = providers.environmentVariable("DOCKER_HUB_PASSWORD")
             )
         )
+    }
+}
+
+jib {
+    container {
+        mainClass = mainClassFqn
     }
 }
