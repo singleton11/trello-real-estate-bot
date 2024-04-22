@@ -95,6 +95,7 @@ fun Application.module() {
         }
         post("/") {
             val input = call.receive<String>()
+            logger.info("Raw input $input")
             val json = jsonObject
             val type = json.decodeFromString<Input>(input).action.type
             if (type == "createCard") {
