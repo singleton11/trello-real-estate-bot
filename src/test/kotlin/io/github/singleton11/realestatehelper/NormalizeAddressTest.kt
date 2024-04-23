@@ -3,7 +3,7 @@ package io.github.singleton11.realestatehelper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ApplicationKtTest {
+class NormalizeAddressTest {
 
     @Test
     fun `H Diesveldsingel 158`() {
