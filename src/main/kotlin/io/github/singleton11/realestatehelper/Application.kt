@@ -199,6 +199,9 @@ fun HttpRequestBuilder.safariUserAgent() {
     )
 }
 
-fun String.normalizeAddress(): String = replace(" ", "-").replace(".", "").lowercase()
+fun String.normalizeAddress(): String = replace(" ", "-")
+    .replace(".", "")
+    .replace("'", "")
+    .lowercase()
 
 val logger: Logger = LoggerFactory.getLogger("Application")

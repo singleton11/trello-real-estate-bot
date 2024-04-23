@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class ApplicationKtTest {
 
     @Test
-    fun normalizeAddress() {
+    fun `H Diesveldsingel 158`() {
         // Given
         val address = "H. Diesveldsingel 158"
 
@@ -15,5 +15,17 @@ class ApplicationKtTest {
 
         // Then
         assertEquals("h-diesveldsingel-158", normalizedAdress)
+    }
+
+    @Test
+    fun `Wethouder In 't Veldstraat 136`() {
+        // Given
+        val address = "Wethouder In 't Veldstraat 136"
+
+        // When
+        val normalizedAdress = address.normalizeAddress()
+
+        // Then
+        assertEquals("wethouder-in-t-veldstraat-136", normalizedAdress)
     }
 }
