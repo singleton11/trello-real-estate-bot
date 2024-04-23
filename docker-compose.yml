@@ -4,7 +4,12 @@ services:
   app:
     image: whoishe/ktor-app
     ports:
-      - 8080:8080
+      - "8080:8080"
     environment:
       - TRELLO_API_KEY=trello-api-key
-      - TRELLO_API_TOKEN=trello-token
+      - TRELLO_API_TOKEN=trello-api-token
+      - VIEWING_EMAIL=viewing-email
+      - VIEWING_SALUTATION=viewing-salutation
+      - VIEWING_FIRST_NAME=viewing-first-name
+      - VIEWING_LAST_NAME=viewing-last-name
+      - VIEWING_PHONE=viewing-phone-number
