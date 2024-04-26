@@ -163,7 +163,7 @@ fun Application.module() {
                                 // send a form
                                 val submitResponse = client.submitForm(
                                     url.toString(),
-                                    Parameters.build {
+                                    formParameters = Parameters.build {
                                         append("__RequestVerificationToken", requestToken)
                                         append("Opmerking", message.getString())
                                         append("Aanhef", salutation.getString())
